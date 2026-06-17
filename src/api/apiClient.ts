@@ -1,26 +1,26 @@
 import * as vscode from 'vscode';
-export type APiProvide = 'openrouter' | 'groq' | 'firework';
+export type ApiProvider = 'openrouter' | 'groq' | 'firework';
 interface ProviderConfig {
     endpoint: string;
     getApiKey: () => string;
-    getMOdel: () => string;
+    getModel: () => string;
 
 }
-const PROVIDER_CONFIG: record<APiProvide,ProviderConfig> = {
+const PROVIDER_CONFIG: Record<ApiProvider,ProviderConfig> = {
     openrouter: {
         endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-        gerApiKey: ,
-        getModel; ,
+        getApiKey: ,
+        getModel: ,
     },
     groq: {
         endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-        gerApiKey: ,
-        getModel; ,
+        getApiKey: ,
+        getModel: ,
     },
     fireworks: {
         endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-        gerApiKey: ,
-        getModel; ,
+        getApiKey: ,
+        getModel: ,
     }
 }
 
