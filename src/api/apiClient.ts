@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { getConfig } from '../services/configurationService';
 import { header } from 'express-validator';
+import { ChatStreamChunk } from '../utils/types'; 
+import Stream from 'stream';
+
 export type ApiProvider = 'openrouter' | 'groq' | 'fireworks';
 interface ProviderConfig {
     endpoint: string;
@@ -27,6 +30,70 @@ const PROVIDER_CONFIG: Record<ApiProvider, ProviderConfig> = {
 };
 
 export class ApiClient implements vscode.Disposable {
+    private readonly outputChannel: vscode.OutputChannel;
+    private pensingREquest: AbortController | null = null;
+
+    constructor(outputChannel: vscode.OutputChannel){
+                this.outputChannel = outputChannel;
+    }
+
+    getActivateProvider(): ApiProvider | null{
+        const config = getConfig();
+
+        if(config.openrouterApiKey) return 'openrouter';
+        if(config.groqApiKey)   return 'groq';
+        if(config.fireworksApiKey)  return 'fireworks';
+        
+        return null;
+    }
+
+    async complete{
+        messages: ChatMessage[],
+        options: {
+            maxTokens?:number;
+        }= {}
+    }: Promise<AsyncGenerator<string, void,unknown> {
+        const provider = this.getActivateProvider();
+        if(!provider){
+            throw new Error('No API key configuration');
+        }
+
+        this.cancel();
+        this.pendingRequest = new AbortController();
+
+        const configService = getConfig();
+
+        const maxTokens = configService.maxTokens;
+        const ProviderConfig = PROVIDER_CONFIG[provider];
+
+        const model = PROVIDER_CONFIG.getModel(); 
+
+        const body: Record<string, unknown> = {
+            model,
+            messages,
+            max_tokens:maxTokens,
+            Stream: true,
+            temprature: 0.1,
+        }
+
+        this.log(`[${provider}] Request: model=${body.model}, max_tokens={maxTOken}`);
+
+        return this.streamRequest(
+            PROVIDER_CONFIG.endpoint,
+            body,
+            PROVIDER_CONFIG.getApitKey(),
+            this.pendingRequest.signal,
+        ); 
+    }
+
+    cancel(): void{
+        if(this.pendingRequest){
+            this.pendingRequest.abort();
+            this.pendingRequest = null;
+        }
+
+    }
+    
     private async* streamRequest(
         endpoint: string,
         body: Record<string, unknown>,
@@ -40,6 +107,7 @@ export class ApiClient implements vscode.Disposable {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(body),
+            signal,
         });
 
         if(!response.ok){
@@ -63,13 +131,41 @@ export class ApiClient implements vscode.Disposable {
                 }
 
                 buffer += decoder.decode(value,{stream:true});
-                console.log(buffer)
+                const lines = buffer.split('n');
+
+                buffer = lines.pop() || '';
+
+                for(const line of lines){
+                    if(line.startsWith('data:')){
+                        const data = line.slice(6);
+                        if(data==='[DONE]'){
+                            return;
+                        }
+                        try{
+                            const chunk = JSON.parse(data) as ChatStreamChunk;
+                            if(chunk.choices && chunk.choices.length > 0){
+                                const content = chunk.choices[0].delta?.content;
+                                if(content){
+                                    yield content;
+                                }
+                            }
+                        }catch(error){
+                            this.log(`Parse error: ${error}`);
+                            
+                        }
+                    }
+                }
             }
         }finally{
             reader.releaseLock();
         }
     }
-    dispose() {
 
+    private log(message: string): void{
+        this.outputChannel.appendLine(`[ApiClient] ${message}`);
+    }
+
+    dispose() {
+        throw new Error('Method not implemented');
     }
 }
