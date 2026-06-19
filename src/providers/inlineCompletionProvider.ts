@@ -21,7 +21,7 @@ export class InlineCompletionProvider implements vscode.InlineCompletionItemProv
                 new vscode.Range(new vscode.Position(0,0),position)
             );
             this.log(`provideInlineCompletionItems called at ${position.line}:${position.character}`);
-            const generator = await this.ApiClient.complete(
+            const generator  = await this.ApiClient.complete(
                 [
                     {role: 'system', content: 'complete the code. Output ONLY the competion, no explanation.'},
                     {role: 'user', content: prefix},

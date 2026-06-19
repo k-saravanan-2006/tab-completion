@@ -14,6 +14,40 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration":{
+      "title": "Tab Completion",
+      "properties": {
+        "tab-completion.fireworksApiKey": {
+          "type":"string",
+          "default":"",
+          "description": "fireworks Api Key"
+        },
+
+        "tab-completion.groqApiKey": {
+          "type":"string",
+          "default":"",
+          "description": "Groq Api Key"
+        },
+
+        "tab-completion.openRouterApiKey": {
+          "type":"string",
+          "default":"",
+          "description": "openRouter Api Key"
+        },
+
+        "tab-completion.model": {
+          "type":"string",
+          "default":"qwen/qwen32",
+          "description": "AI model to use for completion"
+        },
+
+        "tab-completion.maxToken": {
+          "type":"number",
+          "default":"",
+          "description": "Maximum tokens to generate"
+        }
+      }
+    },
     "commands": [
       {
         "command": "tab-completion.helloWorld",
